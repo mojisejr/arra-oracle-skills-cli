@@ -510,18 +510,22 @@ Append new sessions. Never overwrite existing entries (Nothing is Deleted).
 ## Output Summary
 
 ### Default mode
-```
-🌱 Incubating: [REPO]
 
-  Mode:     default (long-term dev)
-  Location: ψ/incubate/OWNER/REPO/
-  Working:  ~/Code/github.com/OWNER/REPO/
-  Branch:   [current-branch]
-  Remote:   [origin-url]
-  Status:   [N] changed files
+announce-mode → bash substitutes $ROOT/$OWNER/$REPO/$WORK_DIR to absolute paths;
+never print "Location: ψ/..." literally. See CONVENTIONS.md.
 
-  Next: make changes, commit, push, create PR
-  Done: /incubate --offload OWNER/REPO
+```bash
+echo "🌱 Incubating: $REPO"
+echo ""
+echo "  Mode:     default (long-term dev)"
+echo "  Location: $ROOT/ψ/incubate/$OWNER/$REPO/"
+echo "  Working:  $WORK_DIR"
+echo "  Branch:   $(git -C "$WORK_DIR" branch --show-current)"
+echo "  Remote:   $(git -C "$WORK_DIR" remote get-url origin)"
+echo "  Status:   $(git -C "$WORK_DIR" status --short | wc -l) changed files"
+echo ""
+echo "  Next: make changes, commit, push, create PR"
+echo "  Done: /incubate --offload $OWNER/$REPO"
 ```
 
 ### --flash mode
@@ -537,24 +541,32 @@ Append new sessions. Never overwrite existing entries (Nothing is Deleted).
 ```
 
 ### --contribute mode
-```
-🤝 Contributing: [REPO]
 
-  Location: ψ/incubate/OWNER/REPO/
-  Fork:     [fork-url if forked]
-  Branches: [list]
-  PRs:      [list]
+announce-mode → bash substitutes; never print "Location: ψ/..." literally.
 
-  Next: continue working, or /incubate --offload when done
+```bash
+echo "🤝 Contributing: $REPO"
+echo ""
+echo "  Location: $ROOT/ψ/incubate/$OWNER/$REPO/"
+echo "  Fork:     ${FORK_URL:-[none]}"
+echo "  Branches: ${BRANCHES:-[list]}"
+echo "  PRs:      ${PRS:-[list]}"
+echo ""
+echo "  Next: continue working, or /incubate --offload when done"
 ```
 
 ### --status mode
+
+The actual emission lives in the bash block under `Mode: --status` above —
+`echo "    Path:   $TARGET"` resolves `$TARGET` via `readlink`, so paths are
+absolute. Example rendering:
+
 ```
 🌱 Active Incubations
 
   OWNER/REPO
     Branch: feat/x | Changes: 3
-    Path:   ~/Code/github.com/OWNER/REPO
+    Path:   /Users/nat/ghq/github.com/OWNER/REPO
 
   Total: N active incubation(s)
 ```

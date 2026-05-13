@@ -12,6 +12,21 @@ argument-hint: "[--pain | --plan | --gain | --all | --speculate | --between]"
 
 /dream sees the forest. /morpheus sees what the forest will look like *tomorrow*.
 
+---
+
+## Step 0: Ground (date-stamp + root capture)
+
+Run before any phase — gives the AI a current-time reference (#301) and an
+absolute `$PSI` for any announce-mode writes (CONVENTIONS.md).
+
+```bash
+date "+🕐 %H:%M %Z (%A %d %B %Y)"
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+PSI="$ORACLE_ROOT/ψ"
+```
+
+---
+
 ## What's New vs /dream
 
 | Feature | /dream (lab) | /morpheus (secret) |
