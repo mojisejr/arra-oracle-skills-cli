@@ -10,6 +10,18 @@ argument-hint: "[connect <path> | disconnect <name> | search <query> | list]"
 
 Connect external knowledge bases so Oracle can think from ALL your accumulated knowledge, not just the current repo.
 
+## Step 0: Ground (date-stamp + root capture)
+
+Run before any mode — current-time reference for the AI (#301) plus absolute
+`$PSI` for the registry path (CONVENTIONS.md).
+
+```bash
+date "+🕐 %H:%M %Z (%A %d %B %Y)"
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+PSI="$ORACLE_ROOT/ψ"
+VAULT_REGISTRY="$PSI/vault.json"
+```
+
 ## Usage
 
 ```

@@ -8,6 +8,18 @@ argument-hint: "[list | add <name> | remove <name> | show <name>]"
 
 Manage contacts for `/talk-to` routing. Stored in repo at `ψ/contacts.json` — committable, shareable.
 
+## Step 0: Ground (date-stamp + root capture)
+
+Run before any mode — current-time reference for the AI (#301) plus absolute
+`$PSI` so announce-mode writes show clickable paths (CONVENTIONS.md).
+
+```bash
+date "+🕐 %H:%M %Z (%A %d %B %Y)"
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+PSI="$ORACLE_ROOT/ψ"
+CONTACTS_FILE="$PSI/contacts.json"
+```
+
 ## File Location
 
 ```
@@ -115,8 +127,7 @@ Skip interactive for provided flags. Still ask for missing ones.
 ### Save
 
 ```bash
-# Read existing
-CONTACTS_FILE="$(pwd)/ψ/contacts.json"
+# Read existing — $CONTACTS_FILE comes from Step 0 (absolute, via $PSI).
 mkdir -p "$(dirname "$CONTACTS_FILE")"
 
 # If file doesn't exist, create empty

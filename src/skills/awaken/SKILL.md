@@ -99,8 +99,15 @@ If `--reawaken` argument passed, skip wizard entirely — go to --reawaken flow 
 Before system check, detect if the session is under context pressure:
 
 ```bash
+# Step 0 date-stamp: ground the AI in the current moment per invocation (#301).
+date "+🕐 %H:%M %Z (%A %d %B %Y)"
+
+# Capture oracle root for absolute-path announce sites (CONVENTIONS.md).
+ORACLE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+PSI="$ORACLE_ROOT/ψ"
+
 # Check if this session has been running long (many messages processed)
-ENCODED_PWD=$(echo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | sed 's|^/|-|; s|[/.]|-|g')
+ENCODED_PWD=$(echo "$ORACLE_ROOT" | sed 's|^/|-|; s|[/.]|-|g')
 PROJECT_DIR="$HOME/.claude/projects/${ENCODED_PWD}"
 LATEST_JSONL=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
 if [ -n "$LATEST_JSONL" ]; then
@@ -714,8 +721,12 @@ gh issue create \
 
 **If `family_join: true` BUT `gh` is NOT available**:
 
-```
-📤 Saved to ψ/outbox/. Forward to family later when gh is ready.
+announce-mode → emit via bash echo so `$PSI` substitutes to the absolute
+outbox path (CONVENTIONS.md — never print bare `ψ/`).
+
+```bash
+echo "📤 Saved to: $PSI/outbox/awaken_$(date +%Y-%m-%d)_${MODE:-full}.md"
+echo "    Forward to family later when gh is ready."
 ```
 
 Do NOT warn or nag. The outbox file is there — they can forward it whenever they install gh.
