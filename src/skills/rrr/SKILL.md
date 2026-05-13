@@ -126,11 +126,22 @@ Then append ONE row:
 
 **Rule**: never skip. Trivial session? Still append with `trivial` in win/friction. Gaps break the pattern-detection value of the file.
 
-### 4. Oracle Sync
+### 4. Oracle Sync (two-layer pattern)
 
-```
-arra_learn({ pattern: [lesson content], concepts: [tags], source: "rrr: REPO" })
-```
+1. Write to `ψ/memory/learnings/YYYY-MM-DD_<slug>.md` with frontmatter:
+   ```yaml
+   ---
+   pattern: <lesson learned in one line>
+   date: <today>
+   source: rrr: REPO
+   concepts: [<tags>]
+   ---
+
+   # <lesson title>
+   <body>
+   ```
+
+2. The Oracle's auto-memory layer picks up new files in `ψ/memory/learnings/` automatically — no separate API call needed.
 
 ### 4.5. Pattern Check (last 7 rows)
 
