@@ -31,16 +31,26 @@ function walkDir(dir: string): string[] {
 }
 
 // Discover skill directories (same logic as installer.ts discoverSkills)
-const skillDirs = readdirSync(SKILLS_DIR, { withFileTypes: true })
+const activeDirs = readdirSync(SKILLS_DIR, { withFileTypes: true })
   .filter((d) => d.isDirectory() && !d.name.startsWith('.') && d.name !== '_template')
-  .map((d) => d.name)
-  .sort();
+  .map((d) => ({ name: d.name, dir: join(SKILLS_DIR, d.name) }));
+
+// Archived (zombie) skills live in src/skills/.archive/. Include them in the
+// VFS so compiled-binary `install -s <name>` opt-in still works after move.
+const ARCHIVE_DIR = join(SKILLS_DIR, '.archive');
+const archivedDirs = existsSync(ARCHIVE_DIR)
+  ? readdirSync(ARCHIVE_DIR, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+      .map((d) => ({ name: d.name, dir: join(ARCHIVE_DIR, d.name) }))
+  : [];
+
+const skillDirs = [...activeDirs, ...archivedDirs].sort((a, b) => a.name.localeCompare(b.name));
+const skillNames = skillDirs.map((s) => s.name);
 
 // Build VFS data
 const entries: string[] = [];
 
-for (const skillName of skillDirs) {
-  const skillDir = join(SKILLS_DIR, skillName);
+for (const { name: skillName, dir: skillDir } of skillDirs) {
   const files = walkDir(skillDir);
 
   const fileEntries: string[] = [];
@@ -67,7 +77,7 @@ export const SKILLS_VFS: Map<string, Map<string, string>> = new Map([
 ${entries.join(',\n')}
 ]);
 
-export const SKILL_NAMES: string[] = ${JSON.stringify(skillDirs)};
+export const SKILL_NAMES: string[] = ${JSON.stringify(skillNames)};
 `;
 
 // Ensure output directory exists
@@ -77,8 +87,6 @@ if (!existsSync(OUTPUT_DIR)) {
 
 await Bun.write(OUTPUT_FILE, output);
 
-const totalFiles = skillDirs.reduce((sum, name) => {
-  return sum + walkDir(join(SKILLS_DIR, name)).length;
-}, 0);
+const totalFiles = skillDirs.reduce((sum, s) => sum + walkDir(s.dir).length, 0);
 
 console.log(`Generated VFS: ${skillDirs.length} skills, ${totalFiles} files → ${OUTPUT_FILE}`);
