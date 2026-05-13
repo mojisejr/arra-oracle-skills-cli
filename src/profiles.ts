@@ -44,12 +44,31 @@ export const MINIMAL_ONLY_SKILLS = [
 
 /** Zombie skills — internal development candidates from arra-symbiosis-skills.
  *  Excluded from ALL profiles. Install by name only: `arra install -s workon`
- *  These are dormant — available for development, not for users. */
+ *  These are dormant — available for development, not for users.
+ *
+ *  Storage: each zombie lives under `src/skills/.archive/<name>/SKILL.md`
+ *  (moved out of the active skill listing for cognitive + visual cleanup).
+ *  The installer + VFS generator know to also scan `.archive/` so the `-s`
+ *  opt-in path keeps working unchanged. Nothing-is-Deleted preserved. */
 export const ZOMBIE_SKILLS = [
   'alpha-feature', 'birth', 'deep-research', 'gemini', 'handover',
   'list-issues-pr-pulse', 'mine', 'new-issue', 'oracle-manage',
   'speak', 'what-we-done', 'whats-next', 'workon',
 ] as const;
+
+/** Return the source directory for a skill by name — `.archive/` for zombies,
+ *  plain `src/skills/<name>` for everything else. Pure-function helper used by
+ *  installer + VFS generator + any future tooling that needs to resolve a skill
+ *  source path. Falls back to the active path so callers can still test
+ *  existence via fs.existsSync. */
+export function skillDirFor(name: string, skillsRoot: string): string {
+  const isZombie = (ZOMBIE_SKILLS as readonly string[]).includes(name);
+  // Use string concatenation here to avoid a node:path import in this pure module.
+  const sep = skillsRoot.endsWith('/') ? '' : '/';
+  return isZombie
+    ? `${skillsRoot}${sep}.archive/${name}`
+    : `${skillsRoot}${sep}${name}`;
+}
 
 // Backwards-compatible aliases
 export const labOnly = [...LAB_SKILLS] as string[];

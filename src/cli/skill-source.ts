@@ -50,6 +50,23 @@ function getCommandsDir(): string {
   return join(dirname(import.meta.path), '..', 'commands');
 }
 
+/**
+ * Resolve a skill name to its on-disk directory.
+ * Checks the active path first (`src/skills/<name>`), then falls back to
+ * the archive path (`src/skills/.archive/<name>`). Used by readSkillFile +
+ * listSkillFiles + skillHasHooks so archived (zombie) skills remain
+ * installable via `-s <name>` after move to `.archive/`.
+ */
+function resolveSkillDir(skillName: string): string {
+  const skillsRoot = getSkillsDir();
+  const primary = join(skillsRoot, skillName);
+  if (existsSync(primary)) return primary;
+  const archived = join(skillsRoot, '.archive', skillName);
+  if (existsSync(archived)) return archived;
+  // Fall through to primary path so existsSync checks downstream report not-found
+  return primary;
+}
+
 // ── Unified API ────────────────────────────────────────────
 
 /** Discover all available skills */
@@ -82,13 +99,23 @@ export async function discoverSkills(): Promise<Skill[]> {
   const skillsPath = getSkillsDir();
   if (!existsSync(skillsPath)) return [];
 
-  const skillDirs = readdirSync(skillsPath, { withFileTypes: true })
+  // Active skills live directly under src/skills/.
+  // Archived skills (zombies) live under src/skills/.archive/ — still discoverable
+  // by name for the `-s` opt-in path. Excluded from default listings/profiles.
+  const activeDirs = readdirSync(skillsPath, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
-    .map((d) => d.name);
+    .map((d) => ({ name: d.name, dir: join(skillsPath, d.name) }));
+
+  const archivePath = join(skillsPath, '.archive');
+  const archivedDirs = existsSync(archivePath)
+    ? readdirSync(archivePath, { withFileTypes: true })
+        .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+        .map((d) => ({ name: d.name, dir: join(archivePath, d.name) }))
+    : [];
 
   const skills: Skill[] = [];
-  for (const name of skillDirs) {
-    const skillMdPath = join(skillsPath, name, 'SKILL.md');
+  for (const { name, dir } of [...activeDirs, ...archivedDirs]) {
+    const skillMdPath = join(dir, 'SKILL.md');
     if (existsSync(skillMdPath)) {
       const content = await Bun.file(skillMdPath).text();
       const descMatch = content.match(/description:\s*(.+)/);
@@ -98,7 +125,7 @@ export async function discoverSkills(): Promise<Skill[]> {
       skills.push({
         name,
         description: descMatch?.[1]?.trim() || '',
-        path: join(skillsPath, name),
+        path: dir,
         ...(hiddenMatch ? { hidden: true } : {}),
         ...(secretMatch ? { secret: true } : {}),
         ...(zombieMatch ? { zombie: true } : {}),
@@ -117,7 +144,7 @@ export async function readSkillFile(
     const { vfs } = await getVFS();
     return vfs.get(skillName)?.get(relativePath) ?? null;
   }
-  const fullPath = join(getSkillsDir(), skillName, relativePath);
+  const fullPath = join(resolveSkillDir(skillName), relativePath);
   if (!existsSync(fullPath)) return null;
   return Bun.file(fullPath).text();
 }
@@ -130,7 +157,7 @@ export async function listSkillFiles(skillName: string): Promise<string[]> {
     return files ? [...files.keys()] : [];
   }
   // Filesystem: walk the directory
-  const skillDir = join(getSkillsDir(), skillName);
+  const skillDir = resolveSkillDir(skillName);
   if (!existsSync(skillDir)) return [];
   return walkDirRelative(skillDir, skillDir);
 }
@@ -183,7 +210,7 @@ export async function skillHasHooks(skillName: string): Promise<boolean> {
     const files = vfs.get(skillName);
     return files?.has('hooks/hooks.json') ?? false;
   }
-  return existsSync(join(getSkillsDir(), skillName, 'hooks', 'hooks.json'));
+  return existsSync(join(resolveSkillDir(skillName), 'hooks', 'hooks.json'));
 }
 
 /** Get the commands directory path (filesystem mode only) */

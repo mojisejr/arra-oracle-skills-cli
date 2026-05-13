@@ -1,6 +1,6 @@
 ---
-description: '[core] v3.3.1 | Switch skill profiles and features. Enable/disable skills instantly. Use when user says "go", "go minimal", "go standard", "go + soul", "switch profile", "enable skills", "disable skills".'
-argument-hint: "<minimal|standard|full> [+ soul|network|workspace|creator]"
+description: '[core] v26.5.13-alpha.1626 | Switch skill profiles (standard/full/lab), fresh install, or enable/disable specific skills via arra-oracle-skills CLI. Destructive — modifies globally installed skills.'
+argument-hint: "<standard|full|lab|cleanup> | enable|disable <skill...>"
 ---
 
 # /go
@@ -19,5 +19,5 @@ Execute the `go` skill with the provided arguments.
 **WARNING**: Do NOT use Glob, find, or search for this skill. The path above is the ONLY correct location. Other files with "go" in the name are NOT this skill.
 
 ---
-*🧬 Nat Weerawan × Oracle · Symbiotic Intelligence · v3.3.1*
+*🧬 Nat Weerawan × Oracle · Symbiotic Intelligence · v26.5.13-alpha.1626*
 *Digitized from Nat Weerawan's brain — thousands of hours working alongside AI, captured as code*
