@@ -1,7 +1,7 @@
 ---
 name: rrr
 description: Create session retrospective with AI diary and lessons learned. Use when user says "rrr", "retrospective", "wrap up session", "session summary", or at end of work session.
-argument-hint: "[--detail | --dig | --deep]"
+argument-hint: "[--quick | --detail | --deep]"
 ---
 
 # /rrr
@@ -9,15 +9,18 @@ argument-hint: "[--detail | --dig | --deep]"
 > "Reflect to grow, document to remember."
 
 ```
-/rrr                      # Quick retro, main agent
-/rrr --detail             # Full template, main agent
-/rrr --dig                # Reconstruct past timeline from session .jsonl
+/rrr                      # Retro with session timeline (dig-powered)
+/rrr --quick              # No dig — memory-only, faster but no timeline after compaction
+/rrr --detail             # Full template + dig timeline
 /rrr --deep               # 5 parallel subagents
 /rrr --deep --teammate    # 3 coordinated team agents (requires AGENT_TEAMS)
 ```
 
+**Default mode always mines session .jsonl for timeline** — survives compaction, shows real timestamps.
+`--quick` skips dig for speed when you don't need the timeline.
+
 **NEVER spawn subagents or use the Task tool. Only `--deep` and `--deep --teammate` may use subagents.**
-**`/rrr`, `/rrr --detail`, and `/rrr --dig` = main agent only. Zero subagents. Zero Task calls.**
+**`/rrr`, `/rrr --quick`, `/rrr --detail` = main agent only. Zero subagents. Zero Task calls.**
 
 ---
 
@@ -50,34 +53,109 @@ All paths below use `$PSI/` instead of bare `ψ/`.
 
 ---
 
-## /rrr (Default)
+## /rrr (Default — dig-powered)
 
-### 1. Gather
+### 1. Gather + Mine Session Timeline
+
+Run git context AND dig in one step:
 
 ```bash
 date "+%H:%M %Z (%A %d %B %Y)"
 git log --oneline -10 && git diff --stat HEAD~5
 ```
 
-### 1.5. Detect Session (optional)
+Detect session + mine timeline from .jsonl:
 
 ```bash
 ENCODED_PWD=$(echo "$ORACLE_ROOT" | sed 's|^/|-|; s|[/.]|-|g')
-PROJECT_DIR="$HOME/.claude/projects/${ENCODED_PWD}"
-LATEST_JSONL=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
+PROJECT_BASE=$(ls -d "$HOME/.claude/projects/${ENCODED_PWD}" 2>/dev/null | head -1)
+export PROJECT_DIRS="$PROJECT_BASE"
+
+# Strip -wt* suffix to find parent project dir
+PARENT_ENCODED=$(echo "$ENCODED_PWD" | sed 's/-wt-[^/]*$//')
+if [ "$PARENT_ENCODED" != "$ENCODED_PWD" ]; then
+  PARENT_BASE=$(ls -d "$HOME/.claude/projects/${PARENT_ENCODED}" 2>/dev/null | head -1)
+  [ -n "$PARENT_BASE" ] && export PROJECT_DIRS="$PROJECT_DIRS:$PARENT_BASE"
+fi
+
+# nullglob-safe worktree scan
+for base in "$PROJECT_BASE" "$PARENT_BASE"; do
+  [ -z "$base" ] && continue
+  for wt in "$base"-wt-*(N); do
+    [ -d "$wt" ] && export PROJECT_DIRS="$PROJECT_DIRS:$wt"
+  done
+done
+
+python3 ~/.claude/skills/dig/scripts/dig.py 0 --deep
+```
+
+Extract session ID + mine REAL message timestamps from the .jsonl:
+```bash
+LATEST_JSONL=$(ls -t "$PROJECT_BASE"/*.jsonl 2>/dev/null | head -1)
 if [ -n "$LATEST_JSONL" ]; then
   SESSION_ID=$(basename "$LATEST_JSONL" .jsonl)
   echo "SESSION: ${SESSION_ID:0:8}"
 fi
+
+# REQUIRED: extract real timestamps for the Timeline section.
+# Pull every real user message + its timestamp from the session file.
+# Dig gives session-level data only — for sub-session timestamps we read the jsonl directly.
+python3 - <<'PYEOF'
+import json, os
+from datetime import datetime, timezone, timedelta
+tz = timezone(timedelta(hours=7))
+jsonl = os.environ.get('LATEST_JSONL', '')
+if not jsonl or not os.path.exists(jsonl): exit(0)
+with open(jsonl) as f:
+    for line in f:
+        try:
+            m = json.loads(line)
+            if m.get('type') != 'user' or 'message' not in m: continue
+            content = m['message'].get('content', '')
+            if isinstance(content, list):
+                for c in content:
+                    if isinstance(c, dict) and c.get('type') == 'text':
+                        content = c.get('text', ''); break
+            if not isinstance(content, str): continue
+            ts = m.get('timestamp', '')
+            # Skip tool-result / system messages
+            if not ts or '<command-name>' in content[:200] or content.startswith('<bash-'): continue
+            dt = datetime.fromisoformat(ts.replace('Z', '+00:00')).astimezone(tz)
+            snippet = content[:100].replace(chr(10), ' ')
+            print(f"{dt.strftime('%Y-%m-%d %H:%M')} | {snippet}")
+        except: pass
+PYEOF
 ```
 
-If detected, include in retrospective header:
+**RULES for the Timeline section**:
+
+1. **REAL timestamps only** — pulled from this jsonl extraction, never "approx" or memory-guesses. If extraction is empty (no session file), say so explicitly in the timeline rather than inventing times.
+
+2. **Date once in a header, time-only in rows** — when all entries are same-day, format like this:
+
+   ```markdown
+   ## Timeline
+
+   **Date**: 2026-05-14 (GMT+7) · all times same-day
+
+   | Time | What |
+   |---|---|
+   | 20:14 | User: "..." |
+   | 20:21 | PR #379 merged |
+   | 21:13 | User: "..." |
+   ```
+
+   Do NOT repeat `2026-05-14 20:14` on every row. The date belongs in the header.
+
+3. **Multi-day session** — if entries span more than one day, group by day with a `### YYYY-MM-DD` subheader for each day, then `HH:MM` rows under it.
+
+Include in retrospective header:
 ```
 📡 Session: 74c32f34 | repo-name | Xh XXm
 ```
-If detection fails, skip silently.
+If dig or session detection fails, skip silently and continue with git-only context.
 
-### 2. Write Retrospective
+### 2. Write Retrospective with Timeline
 
 **Path**: `$PSI/memory/retrospectives/YYYY-MM/DD/HH.MM_slug.md`
 
@@ -85,9 +163,9 @@ If detection fails, skip silently.
 mkdir -p "$PSI/memory/retrospectives/$(date +%Y-%m/%d)"
 ```
 
-Write immediately, no prompts. Include:
+Write immediately, no prompts. Build the Timeline section from the .jsonl extraction above — every row must have a real `YYYY-MM-DD HH:MM` timestamp. Never use "approx", "around", or memory-guessed times. Include:
 - Session Summary
-- Timeline
+- Timeline (real timestamps from .jsonl mining — `YYYY-MM-DD HH:MM | what`)
 - Files Modified
 - AI Diary (150+ words, first-person; must contain one line labeled `[→ AGENT DECISION]` naming a choice YOU made wrong — overconfidence, repeated wrong proposal, misread requirement; tool failures and env issues belong in friction, not here)
 - Honest Feedback (100+ words, 3 friction points; **session-specific only** — what dragged in THIS session; if something generalizes beyond this session, it belongs in Lessons, not here)
@@ -216,51 +294,32 @@ Then steps 3-5 same as default.
 
 ---
 
-## /rrr --dig
+## /rrr --quick
 
-**Retrospective powered by session goldminer. No subagents.**
+**Fast retro without dig — uses conversation memory only.** Use when you want speed over timeline accuracy, or when dig.py is unavailable.
 
-### 1. Run dig to get session timeline
-
-Discover project dirs using full-path encoding (same as Claude's `.claude/projects/` naming), including worktree dirs:
-
-```bash
-ENCODED_PWD=$(echo "$ORACLE_ROOT" | sed 's|^/|-|; s|[/.]|-|g')
-PROJECT_BASE=$(ls -d "$HOME/.claude/projects/${ENCODED_PWD}" 2>/dev/null | head -1)
-export PROJECT_DIRS="$PROJECT_BASE"
-
-# Strip -wt* suffix to find parent project dir
-PARENT_ENCODED=$(echo "$ENCODED_PWD" | sed 's/-wt-[^/]*$//')
-if [ "$PARENT_ENCODED" != "$ENCODED_PWD" ]; then
-  PARENT_BASE=$(ls -d "$HOME/.claude/projects/${PARENT_ENCODED}" 2>/dev/null | head -1)
-  [ -n "$PARENT_BASE" ] && export PROJECT_DIRS="$PROJECT_DIRS:$PARENT_BASE"
-fi
-
-# nullglob-safe worktree scan (both parent and self)
-for base in "$PROJECT_BASE" "$PARENT_BASE"; do
-  [ -z "$base" ] && continue
-  for wt in "$base"-wt-*(N); do  # (N) = zsh nullglob qualifier
-    [ -d "$wt" ] && export PROJECT_DIRS="$PROJECT_DIRS:$wt"
-  done
-done
-```
-
-Then run dig.py to get session JSON:
-
-```bash
-python3 ~/.claude/skills/dig/scripts/dig.py 0
-```
-
-Also gather git context:
+### 1. Gather
 
 ```bash
 date "+%H:%M %Z (%A %d %B %Y)"
 git log --oneline -10 && git diff --stat HEAD~5
 ```
 
-### 2. Write Retrospective with Timeline
+### 1.5. Detect Session
 
-Use the session timeline data to write a full retrospective using the `--detail` template. Add the Past Session Timeline table after Session Summary, before Timeline.
+```bash
+ENCODED_PWD=$(echo "$ORACLE_ROOT" | sed 's|^/|-|; s|[/.]|-|g')
+PROJECT_DIR="$HOME/.claude/projects/${ENCODED_PWD}"
+LATEST_JSONL=$(ls -t "$PROJECT_DIR"/*.jsonl 2>/dev/null | head -1)
+if [ -n "$LATEST_JSONL" ]; then
+  SESSION_ID=$(basename "$LATEST_JSONL" .jsonl)
+  echo "SESSION: ${SESSION_ID:0:8}"
+fi
+```
+
+### 2. Write Retrospective
+
+Same template as default but timeline is reconstructed from conversation memory (may be incomplete after compaction).
 
 ### 3-5. Same as default steps 3-5
 
