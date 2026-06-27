@@ -8,6 +8,10 @@ argument-hint: "[--quick | --detail | --deep]"
 
 > "Reflect to grow, document to remember."
 
+## Oracle Bootstrap Guard
+
+Before writing a retro, read the current repo's `CLAUDE.md` and resolve the local `ψ` root. Honor local identity, memory, team transport, and hard rules over the generic defaults below. If `CLAUDE.md` says the team is `maw`/`webgang`, note cross-Oracle lessons in that context and do not treat internal subagents as the team transport.
+
 ```
 /rrr                      # Retro + 1 background dig subagent (parallel, fast)
 /rrr --quick              # No dig, no subagent — memory only (fastest)
