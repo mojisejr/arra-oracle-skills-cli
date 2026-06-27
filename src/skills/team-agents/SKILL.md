@@ -6,6 +6,10 @@ argument-hint: "<task-description> [--roles N] [--model sonnet|opus|haiku] [--pl
 
 # /team-agents — Coordinated Agent Teams
 
+## Oracle Transport Guard
+
+First read the current repo's `CLAUDE.md` if it exists. If it declares or implies `maw`/`webgang` as the team transport, do not replace that layer with Claude internal TeamCreate/SendMessage. Use `/team-agents` only when the user explicitly asks for internal teammates/subagents for the current task. For cross-Oracle communication in `maw`/`webgang` repos, use the repo-approved `maw` routing instead.
+
 ## Config
 
 ```json

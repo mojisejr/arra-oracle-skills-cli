@@ -9,6 +9,10 @@ trigger: /recap
 
 **Goal**: Orient yourself fast. Rich context by default. Mid-session awareness with `--now`.
 
+## Oracle Bootstrap Guard
+
+Before reporting orientation, read the current repo's `CLAUDE.md` and resolve the local `ψ` root when present. Preserve local identity, team transport, and hard rules over generic upstream defaults. If `CLAUDE.md` says team/routing is `maw` or `webgang`, describe that as the active team transport; do not suggest Claude internal teams/subagents as the team layer unless the user explicitly asks for them.
+
 ## Usage
 
 ```
