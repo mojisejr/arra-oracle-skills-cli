@@ -150,26 +150,6 @@ describe("fix #275 — installer copies scripts/ subdirectory (global install)",
     expect(existsSync(scriptFile)).toBe(true);
   });
 
-  it("Oracle overlay skills install bundled scripts", async () => {
-    await installSkills([TEST_AGENT_GLOBAL], {
-      global: true,
-      skills: ["auto-rrr", "preflight", "tidy", "track"],
-      yes: true,
-    });
-
-    const expectedScripts = [
-      ["auto-rrr", "checkpoint.py"],
-      ["preflight", "preflight.py"],
-      ["tidy", "tidy.py"],
-      ["track", "track.py"],
-    ];
-
-    for (const [skill, script] of expectedScripts) {
-      expect(existsSync(join(SKILLS_DIR, skill, "SKILL.md"))).toBe(true);
-      expect(existsSync(join(SKILLS_DIR, skill, "scripts", script))).toBe(true);
-    }
-  });
-
   it("SKILL.md content is modified (version injected) but script files are copied verbatim", async () => {
     await installSkills([TEST_AGENT_GLOBAL], {
       global: true,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { profiles, labOnly, minimalOnly, MINIMAL_SKILLS, STANDARD_SKILLS, LAB_SKILLS, FULL_ONLY_SKILLS, MINIMAL_ONLY_SKILLS, ZOMBIE_SKILLS, resolveProfile } from "../src/profiles";
+import { profiles, labOnly, minimalOnly, MINIMAL_SKILLS, STANDARD_SKILLS, LAB_SKILLS, MINIMAL_ONLY_SKILLS, ZOMBIE_SKILLS, resolveProfile } from "../src/profiles";
 
 // Simulated full skill list — must include all standard + lab + zombie + minimal-only + other discovered skills
 const ALL_SKILLS = [
@@ -7,7 +7,6 @@ const ALL_SKILLS = [
   ...LAB_SKILLS,
   ...ZOMBIE_SKILLS,
   ...MINIMAL_ONLY_SKILLS,
-  ...FULL_ONLY_SKILLS,
   // Full/other skills (not standard, not lab-only, not minimal-only, not zombie)
   "about-oracle", "create-shortcut", "incubate",
   "oracle-family-scan", "project",
@@ -55,15 +54,6 @@ describe("profiles", () => {
 
   it("LAB_SKILLS has 11 experimental skills (9 post-#327 + xray from standard + hey new)", () => {
     expect(LAB_SKILLS).toHaveLength(11);
-  });
-
-  it("FULL_ONLY_SKILLS includes the Oracle overlay skills staged for full profile", () => {
-    expect([...FULL_ONLY_SKILLS].sort()).toEqual([
-      "auto-rrr",
-      "preflight",
-      "tidy",
-      "track",
-    ]);
   });
 
   it("ZOMBIE_SKILLS has 31 archived candidates (28 prior + 3 lites killed)", () => {
@@ -176,21 +166,6 @@ describe("resolveProfile", () => {
     const standard = resolveProfile("standard", ALL_SKILLS)!;
     for (const skill of standard) {
       expect(full).toContain(skill);
-    }
-  });
-
-  it("full includes full-only Oracle overlay skills", () => {
-    const full = resolveProfile("full", ALL_SKILLS, [], ZOMBIE_LIST)!;
-    for (const skill of FULL_ONLY_SKILLS) {
-      expect(full).toContain(skill);
-    }
-  });
-
-  it("Oracle overlay skills are not promoted to standard or lab", () => {
-    for (const skill of FULL_ONLY_SKILLS) {
-      expect([...STANDARD_SKILLS]).not.toContain(skill);
-      expect([...LAB_SKILLS]).not.toContain(skill);
-      expect([...ZOMBIE_SKILLS]).not.toContain(skill);
     }
   });
 

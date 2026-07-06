@@ -33,12 +33,6 @@ export const LAB_SKILLS = [
   'schedule', 'watch', 'worktree', 'xray',
 ] as const;
 
-/** Full-only skills — stable enough to ship in full, not yet promoted to standard.
- *  New overlay skills land here first so usage/review can decide promotion later. */
-export const FULL_ONLY_SKILLS = [
-  'auto-rrr', 'preflight', 'tidy', 'track',
-] as const;
-
 /** Minimal-only — DEPRECATED, kept as empty for backward compat with imports.
  *  Lites moved to zombie 2026-05-14. See ZOMBIE_SKILLS for forward-lite etc. */
 export const MINIMAL_ONLY_SKILLS = [] as const;
